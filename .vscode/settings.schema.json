@@ -1,0 +1,7 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VS Code Workspace Settings (Local Schema)",
+  "description": "Permissive schema to avoid unresolved schema warnings in environments without VS Code schemas.",
+  "type": "object",
+  "additionalProperties": true
+}
