@@ -864,6 +864,24 @@ function MobileApp() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [unreadLogs, setUnreadLogs] = useState(0);
 
+  // Register service worker for basic PWA caching (optional offline)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if ('serviceWorker' in navigator) {
+      const register = () => {
+        navigator.serviceWorker.register('/sw.js').catch((err) => {
+          console.warn('SW registration failed', err);
+        });
+      };
+      if (document.readyState === 'complete') {
+        register();
+      } else {
+        // @ts-ignore: EventListenerOptions may not include 'once' in older TS lib
+        window.addEventListener('load', register, { once: true });
+      }
+    }
+  }, []);
+
   useEffect(() => {
     if (!isAiActive) return;
     const samples: Array<{ icon: React.ComponentType<any>; message: string }> = [
@@ -930,10 +948,10 @@ function MobileApp() {
         <div aria-hidden="true" className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vmin] h-[60vmin] rounded-full bg-blue-500/10 dark:bg-blue-500/5 blur-2xl animate-[pulse_6s_ease-in-out_infinite] pointer-events-none will-change-transform -z-10" />
       </div>
       
-      <div className="relative z-10 w-full max-w-md h-[800px] bg-black/50 backdrop-blur-2xl rounded-[40px] shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col border border-white/[0.02]">
+      <div className="relative z-10 w-full max-w-md md:h-[800px] h-[100dvh] bg-black/50 backdrop-blur-2xl md:rounded-[40px] rounded-none shadow-[0_20px_60px_rgba(0,0,0,0.8)] overflow-hidden flex flex-col md:border border-transparent md:border-white/[0.02]">
         {/* Device frame with gradient border */}
-        <div className="absolute inset-0 rounded-[40px] bg-gradient-to-br from-cyan-500/20 via-purple-500/20 to-pink-500/20 p-[1px]">
-          <div className="w-full h-full bg-black/90 rounded-[39px]" />
+        <div className="absolute inset-0 md:rounded-[40px] rounded-none bg-gradient-to-br from-cyan-500/20 via-purple-500/20 to-pink-500/20 p-[1px] hidden md:block">
+          <div className="w-full h-full bg-black/90 md:rounded-[39px] rounded-none" />
         </div>
         
         <div className="relative flex flex-col h-full">
