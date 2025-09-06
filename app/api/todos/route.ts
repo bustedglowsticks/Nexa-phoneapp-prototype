@@ -1,11 +1,12 @@
 import { NextResponse } from 'next/server'
-import { getTodos, addTodo } from './store'
+import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
   // Return all todos (client filters human-required as needed)
-  return NextResponse.json(getTodos(), { status: 200 })
+  const todos = await prisma.todo.findMany({ orderBy: { createdAt: 'desc' } })
+  return NextResponse.json(todos, { status: 200 })
 }
 
 export async function POST(req: Request) {
@@ -14,7 +15,14 @@ export async function POST(req: Request) {
     const title = (body.title || '').trim()
     if (!title) return NextResponse.json({ error: 'title is required' }, { status: 400 })
 
-    const created = addTodo({ title, due: body.due, canAiHandle: body.canAiHandle })
+    const created = await prisma.todo.create({
+      data: {
+        title,
+        due: body.due,
+        canAiHandle: body.canAiHandle ?? false,
+        done: false,
+      },
+    })
     return NextResponse.json(created, { status: 201 })
   } catch (err) {
     return NextResponse.json({ error: 'Invalid request' }, { status: 400 })
