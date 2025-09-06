@@ -8,7 +8,8 @@ import {
   Server, GitBranch, FileText, BarChart3, Radio, Link2, Sparkles,
   Network, Upload, Download, HardDrive, Gauge, Settings, Bot,
   CircuitBoard, Workflow, ShieldCheck, Globe, FileCode, BarChart,
-  AlertCircle, CheckCircle, Clock, RefreshCw, Play, Pause, MapPin, Mail
+  AlertCircle, CheckCircle, Clock, RefreshCw, Play, Pause, MapPin, Mail,
+  CalendarDays, MessageSquare, ListTodo
 } from 'lucide-react';
 
 type View = 'dashboard' | 'pipelines' | 'ai-lab' | 'governance' | 'analytics';
@@ -198,6 +199,43 @@ const HomeView = ({ isAiActive, userName = 'Tony', logs = [] }: { isAiActive: bo
     if (!completedJobs.includes(id)) setCompletedJobs(prev => [...prev, id]);
   };
 
+  // NEW: Live clock for "Current Time" card
+  const [currentTime, setCurrentTime] = useState<string>(() => new Date().toLocaleString());
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date().toLocaleString()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  // NEW: To Do list (mock from Outlook) — items NEXA cannot handle are flagged
+  const [todos, setTodos] = useState<Array<{ id:number; title:string; due?:string; canAiHandle:boolean; done?:boolean }>>([
+    { id: 1, title: 'Approve Crew A timesheets', due: 'Today 5:00 PM', canAiHandle: false, done: false },
+    { id: 2, title: 'Confirm weekend outage window with Dispatch', due: 'Tomorrow 9:00 AM', canAiHandle: false, done: false },
+    { id: 3, title: 'Email supplier about transformer lead times', due: 'Mon 10:30 AM', canAiHandle: true, done: false },
+  ]);
+
+  // NEW: Overlays state
+  const [designOpen, setDesignOpen] = useState(false);
+  const [commsOpen, setCommsOpen] = useState(false);
+  const [todoOpen, setTodoOpen] = useState(false);
+
+  // Nexa Design (mock O-Calc) state
+  const [designDesc, setDesignDesc] = useState('');
+  const [designFiles, setDesignFiles] = useState<number>(0);
+  const [designGenerating, setDesignGenerating] = useState(false);
+  const [designResult, setDesignResult] = useState<{ title:string; materials:string[] } | null>(null);
+
+  // Messaging / Nexa Field state
+  const [commsTab, setCommsTab] = useState<'message'|'nexa'>('message');
+  const [dmThread, setDmThread] = useState<Array<{from:'me'|'lori'|'dispatch'; text:string; time:string}>>([
+    { from:'lori', text:'Can you confirm Exhibit B sent?', time:'08:12' },
+    { from:'me', text:'Sent. See thread with Documents.', time:'08:15' },
+  ]);
+  const [dmInput, setDmInput] = useState('');
+  const [nexaChat, setNexaChat] = useState<Array<{from:'me'|'nexa'; text:string; time:string}>>([
+    { from:'nexa', text:'Hi Tony, how can I help? I can fetch forms, specs, or answer utility questions.', time:'Now' }
+  ]);
+  const [nexaInput, setNexaInput] = useState('');
+
   return (
   <div className="space-y-4">
     {/* Welcome Card with animated gradient */}
@@ -216,22 +254,30 @@ const HomeView = ({ isAiActive, userName = 'Tony', logs = [] }: { isAiActive: bo
       </div>
     </Card>
 
-    {/* Quick Actions with holographic buttons */}
+    {/* Nexa Pillars: Design, Messaging/Nexa Field, To Do */}
     <div className="grid grid-cols-3 gap-3">
-      <button className="relative p-4 bg-gradient-to-br from-blue-500/10 to-purple-500/10 rounded-xl backdrop-blur-xl border border-white/[0.05] transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(0,212,255,0.3)] group">
-        <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl" />
-        <Shield className="w-6 h-6 text-cyan-400 mx-auto mb-2" />
-        <p className="text-[10px] uppercase tracking-wider text-gray-400">Security</p>
+      {/* Nexa Design */}
+      <button onClick={() => { setDesignOpen(true); setDesignResult(null); }} className="relative p-4 bg-gradient-to-br from-cyan-500/10 to-blue-500/10 rounded-xl backdrop-blur-xl border border-white/10 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(0,212,255,0.25)] group">
+        <div className="absolute inset-0 bg-gradient-to-br from-cyan-400/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl" />
+        <CircuitBoard className="w-6 h-6 text-cyan-300 mx-auto mb-2" />
+        <p className="text-[10px] uppercase tracking-wider text-gray-300">Nexa Design</p>
+        <p className="text-[10px] text-gray-500 mt-1">O-Calc demo: upload circuit + describe</p>
       </button>
-      <button className="relative p-4 bg-gradient-to-br from-green-500/10 to-emerald-500/10 rounded-xl backdrop-blur-xl border border-white/[0.05] transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(0,255,136,0.3)] group">
-        <div className="absolute inset-0 bg-gradient-to-br from-green-400/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl" />
-        <Activity className="w-6 h-6 text-green-400 mx-auto mb-2" />
-        <p className="text-[10px] uppercase tracking-wider text-gray-400">Monitor</p>
+
+      {/* Messaging / Nexa Field */}
+      <button onClick={() => setCommsOpen(true)} className="relative p-4 bg-gradient-to-br from-purple-500/10 to-pink-500/10 rounded-xl backdrop-blur-xl border border-white/10 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(255,0,160,0.25)] group">
+        <div className="absolute inset-0 bg-gradient-to-br from-purple-400/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl" />
+        <MessageSquare className="w-6 h-6 text-purple-300 mx-auto mb-2" />
+        <p className="text-[10px] uppercase tracking-wider text-gray-300">Message / Nexa Field</p>
+        <p className="text-[10px] text-gray-500 mt-1">DM coworkers or ask the AI assistant</p>
       </button>
-      <button className="relative p-4 bg-gradient-to-br from-pink-500/10 to-red-500/10 rounded-xl backdrop-blur-xl border border-white/[0.05] transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(255,0,160,0.3)] group">
-        <div className="absolute inset-0 bg-gradient-to-br from-pink-400/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl" />
-        <Zap className="w-6 h-6 text-pink-400 mx-auto mb-2" />
-        <p className="text-[10px] uppercase tracking-wider text-gray-400">Power</p>
+
+      {/* To Do List */}
+      <button onClick={() => setTodoOpen(true)} className="relative p-4 bg-gradient-to-br from-emerald-500/10 to-green-500/10 rounded-xl backdrop-blur-xl border border-white/10 transition-all duration-300 hover:scale-105 hover:shadow-[0_0_30px_rgba(0,255,136,0.25)] group">
+        <div className="absolute inset-0 bg-gradient-to-br from-emerald-400/15 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-xl" />
+        <ListTodo className="w-6 h-6 text-emerald-300 mx-auto mb-2" />
+        <p className="text-[10px] uppercase tracking-wider text-gray-300">To Do</p>
+        <p className="text-[10px] text-gray-500 mt-1">Human tasks from Outlook</p>
       </button>
     </div>
 
@@ -293,6 +339,180 @@ const HomeView = ({ isAiActive, userName = 'Tony', logs = [] }: { isAiActive: bo
         </div>
       )}
     </Card>
+
+    {/* Overlays */}
+    {designOpen && (
+      <div className="fixed inset-0 z-40">
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setDesignOpen(false)} />
+        <div className="absolute inset-3 md:inset-20 rounded-2xl border border-white/10 bg-black/90 overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div>
+              <h3 className="text-sm text-white font-medium">Nexa Design • O-Calc Demo</h3>
+              <p className="text-[11px] text-gray-400 mt-0.5">Upload a circuit map and describe the planned work</p>
+            </div>
+            <button onClick={() => setDesignOpen(false)} className="px-3 py-1.5 rounded-lg text-xs border border-white/10 text-gray-300 hover:bg-white/5">Close</button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-4">
+            <Card variant="glass" className="p-4">
+              <label className="text-[12px] text-gray-400">Circuit Map (image or PDF)</label>
+              <input type="file" multiple className="mt-2 block w-full text-[11px] text-gray-300" onChange={(e) => setDesignFiles(e.target.files ? e.target.files.length : 0)} />
+              {designFiles > 0 && <p className="mt-1 text-[11px] text-gray-500">{designFiles} file(s) selected</p>}
+              <label className="text-[12px] text-gray-400 mt-4 block">Brief Description</label>
+              <textarea value={designDesc} onChange={(e)=>setDesignDesc(e.target.value)} rows={4} className="mt-2 w-full rounded-md bg-white/5 border border-white/10 text-sm text-gray-200 p-2 outline-none focus:ring-1 focus:ring-cyan-400" placeholder="e.g., Replace 2 poles, add mid-span transformer, reroute secondary..." />
+              <div className="mt-3 flex items-center gap-2">
+                <button onClick={async () => {
+                  try {
+                    setDesignGenerating(true);
+                    setDesignResult(null);
+                    const res = await fetch('/api/design', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ description: designDesc })
+                    });
+                    if (res.ok) {
+                      const data = await res.json();
+                      setDesignResult({ title: data.title || 'Engineered Design v1', materials: data.materials || [] });
+                    } else {
+                      // fallback mock
+                      setDesignResult({
+                        title: 'Engineered Design v1',
+                        materials: [
+                          '2x Class 2 Wood Pole, 45 ft',
+                          '1x 25 kVA Pole-mount Transformer',
+                          '180 ft #2 ACSR Conductor',
+                          '6x Insulators, Polymer',
+                          'Grounding kit + hardware set'
+                        ]
+                      });
+                    }
+                  } catch (e) {
+                    setDesignResult({
+                      title: 'Engineered Design v1',
+                      materials: [
+                        '2x Class 2 Wood Pole, 45 ft',
+                        '1x 25 kVA Pole-mount Transformer',
+                        '180 ft #2 ACSR Conductor',
+                        '6x Insulators, Polymer',
+                        'Grounding kit + hardware set'
+                      ]
+                    });
+                  } finally {
+                    setDesignGenerating(false);
+                  }
+                }} className="px-3 py-1.5 rounded-lg text-xs border border-cyan-400/30 text-cyan-300 bg-cyan-500/10 hover:bg-cyan-500/20 inline-flex items-center gap-1"><Sparkles className="w-3 h-3"/>Generate</button>
+                {designGenerating && <span className="text-[11px] text-gray-400">Generating…</span>}
+              </div>
+            </Card>
+            {designResult && (
+              <Card variant="glass" className="p-4">
+                <h4 className="text-xs uppercase tracking-wider text-gray-400">{designResult.title}</h4>
+                <ul className="mt-2 list-disc list-inside text-sm text-gray-300 space-y-1">
+                  {designResult.materials.map((m)=> <li key={m}>{m}</li>)}
+                </ul>
+                <p className="text-[11px] text-gray-500 mt-3">This is a demo. O-Calc integration can be wired to generate structural calcs and BOM.</p>
+              </Card>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+
+    {commsOpen && (
+      <div className="fixed inset-0 z-40">
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setCommsOpen(false)} />
+        <div className="absolute inset-3 md:inset-20 rounded-2xl border border-white/10 bg-black/90 overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <div className="flex items-center gap-2">
+              <button onClick={()=>setCommsTab('message')} className={`px-3 py-1.5 rounded-lg text-xs border ${commsTab==='message' ? 'border-purple-400/40 text-purple-200 bg-purple-500/10' : 'border-white/10 text-gray-300 hover:bg-white/5'}`}>Message</button>
+              <button onClick={()=>setCommsTab('nexa')} className={`px-3 py-1.5 rounded-lg text-xs border ${commsTab==='nexa' ? 'border-cyan-400/40 text-cyan-200 bg-cyan-500/10' : 'border-white/10 text-gray-300 hover:bg-white/5'}`}>Nexa Field</button>
+            </div>
+            <button onClick={() => setCommsOpen(false)} className="px-3 py-1.5 rounded-lg text-xs border border-white/10 text-gray-300 hover:bg-white/5">Close</button>
+          </div>
+
+          {/* Message tab */}
+          {commsTab==='message' && (
+            <div className="flex-1 p-4 flex flex-col">
+              <div className="flex-1 overflow-y-auto space-y-2">
+                {dmThread.map((m, idx)=> (
+                  <div key={idx} className={`flex ${m.from==='me' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[70%] rounded-lg px-3 py-2 text-sm ${m.from==='me' ? 'bg-cyan-500/10 text-cyan-100 border border-cyan-400/30' : 'bg-white/5 text-gray-200 border border-white/10'}`}>
+                      <p>{m.text}</p>
+                      <p className="text-[10px] text-gray-500 mt-1">{m.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <input value={dmInput} onChange={(e)=>setDmInput(e.target.value)} placeholder="Message coworker…" className="flex-1 rounded-md bg-white/5 border border-white/10 text-sm text-gray-200 p-2 outline-none focus:ring-1 focus:ring-purple-400" />
+                <button onClick={() => { if (!dmInput.trim()) return; setDmThread(prev=>[...prev, {from:'me', text:dmInput.trim(), time:'Now'}]); setDmInput(''); }} className="px-3 py-1.5 rounded-lg text-xs border border-purple-400/30 text-purple-200 bg-purple-500/10 hover:bg-purple-500/20">Send</button>
+              </div>
+            </div>
+          )}
+
+          {/* Nexa Field tab */}
+          {commsTab==='nexa' && (
+            <div className="flex-1 p-4 flex flex-col">
+              <div className="flex-1 overflow-y-auto space-y-2">
+                {nexaChat.map((m, idx)=> (
+                  <div key={idx} className={`flex ${m.from==='me' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[75%] rounded-lg px-3 py-2 text-sm ${m.from==='me' ? 'bg-cyan-500/10 text-cyan-100 border border-cyan-400/30' : 'bg-white/5 text-gray-200 border border-white/10'}`}>
+                      <p>{m.text}</p>
+                      <p className="text-[10px] text-gray-500 mt-1">{m.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <input value={nexaInput} onChange={(e)=>setNexaInput(e.target.value)} placeholder="Ask Nexa… (forms, specs, circuit questions)" className="flex-1 rounded-md bg-white/5 border border-white/10 text-sm text-gray-200 p-2 outline-none focus:ring-1 focus:ring-cyan-400" />
+                <button onClick={() => { if (!nexaInput.trim()) return; const q=nexaInput.trim(); setNexaChat(prev=>[...prev, {from:'me', text:q, time:'Now'}]); setNexaInput(''); setTimeout(()=> setNexaChat(prev=>[...prev, {from:'nexa', text:'Here you go: I can fetch the form or answer spec references. (demo response)', time:'Now'}]), 800); }} className="px-3 py-1.5 rounded-lg text-xs border border-cyan-400/30 text-cyan-200 bg-cyan-500/10 hover:bg-cyan-500/20">Send</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    )}
+
+    {todoOpen && (
+      <div className="fixed inset-0 z-40">
+        <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={() => setTodoOpen(false)} />
+        <div className="absolute inset-3 md:inset-20 rounded-2xl border border-white/10 bg-black/90 overflow-hidden flex flex-col">
+          <div className="flex items-center justify-between p-4 border-b border-white/10">
+            <h3 className="text-sm text-white font-medium">To Do – Human Tasks</h3>
+            <button onClick={() => setTodoOpen(false)} className="px-3 py-1.5 rounded-lg text-xs border border-white/10 text-gray-300 hover:bg-white/5">Close</button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            {todos.filter(t=>!t.canAiHandle).map(t => (
+              <label key={t.id} className="flex items-start gap-2 text-sm text-gray-300 bg-white/5 border border-white/10 rounded-lg p-3">
+                <input type="checkbox" checked={!!t.done} onChange={(e)=> setTodos(prev=> prev.map(x=> x.id===t.id ? {...x, done:e.target.checked} : x))} className="mt-0.5" />
+                <div className="flex-1">
+                  <div className="flex items-center justify-between">
+                    <span className={`${t.done ? 'line-through text-gray-500' : ''}`}>{t.title}</span>
+                    <div className="flex items-center gap-2">
+                      {t.due && <span className="text-[10px] text-gray-500">{t.due}</span>}
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-300 border border-amber-400/20">Needs human</span>
+                    </div>
+                  </div>
+                </div>
+              </label>
+            ))}
+            {todos.filter(t=>!t.canAiHandle).length===0 && (
+              <p className="text-xs text-gray-500">Nothing left. You’re all clear.</p>
+            )}
+          </div>
+          <div className="p-4 border-t border-white/10 flex items-center gap-2">
+            <input placeholder="New task…" className="flex-1 rounded-md bg-white/5 border border-white/10 text-sm text-gray-200 p-2 outline-none focus:ring-1 focus:ring-emerald-400" onKeyDown={(e)=>{
+              if (e.key==='Enter') {
+                const v=(e.target as HTMLInputElement).value.trim();
+                if (!v) return;
+                setTodos(prev=> [...prev, { id: Date.now(), title:v, canAiHandle:false, done:false }]);
+                (e.target as HTMLInputElement).value='';
+              }
+            }} />
+            <button onClick={()=> setTodoOpen(false)} className="px-3 py-1.5 rounded-lg text-xs border border-emerald-400/30 text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20">Done</button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {/* Foreman Day Flow */}
     <Card variant="glass">
