@@ -206,12 +206,36 @@ const HomeView = ({ isAiActive, userName = 'Tony', logs = [] }: { isAiActive: bo
     return () => clearInterval(timer);
   }, []);
 
-  // NEW: To Do list (mock from Outlook) — items NEXA cannot handle are flagged
-  const [todos, setTodos] = useState<Array<{ id:number; title:string; due?:string; canAiHandle:boolean; done?:boolean }>>([
-    { id: 1, title: 'Approve Crew A timesheets', due: 'Today 5:00 PM', canAiHandle: false, done: false },
-    { id: 2, title: 'Confirm weekend outage window with Dispatch', due: 'Tomorrow 9:00 AM', canAiHandle: false, done: false },
-    { id: 3, title: 'Email supplier about transformer lead times', due: 'Mon 10:30 AM', canAiHandle: true, done: false },
-  ]);
+  // NEW: To Do list (from API). Items NEXA cannot handle are flagged as canAiHandle=false
+  type Todo = { id:number; title:string; due?:string; canAiHandle:boolean; done?:boolean };
+  const [todos, setTodos] = useState<Todo[]>([]);
+  useEffect(() => {
+    let isMounted = true;
+    (async () => {
+      try {
+        const res = await fetch('/api/todos', { cache: 'no-store' });
+        if (res.ok) {
+          const data: Todo[] = await res.json();
+          if (isMounted) setTodos(data);
+        } else {
+          // fallback seed
+          if (isMounted) setTodos([
+            { id: 1, title: 'Approve Crew A timesheets', due: 'Today 5:00 PM', canAiHandle: false, done: false },
+            { id: 2, title: 'Confirm weekend outage window with Dispatch', due: 'Tomorrow 9:00 AM', canAiHandle: false, done: false },
+            { id: 3, title: 'Email supplier about transformer lead times', due: 'Mon 10:30 AM', canAiHandle: true, done: false },
+          ]);
+        }
+      } catch {
+        // offline fallback
+        if (isMounted) setTodos([
+          { id: 1, title: 'Approve Crew A timesheets', due: 'Today 5:00 PM', canAiHandle: false, done: false },
+          { id: 2, title: 'Confirm weekend outage window with Dispatch', due: 'Tomorrow 9:00 AM', canAiHandle: false, done: false },
+          { id: 3, title: 'Email supplier about transformer lead times', due: 'Mon 10:30 AM', canAiHandle: true, done: false },
+        ]);
+      }
+    })();
+    return () => { isMounted = false };
+  }, []);
 
   // NEW: Overlays state
   const [designOpen, setDesignOpen] = useState(false);
@@ -483,7 +507,17 @@ const HomeView = ({ isAiActive, userName = 'Tony', logs = [] }: { isAiActive: bo
           <div className="flex-1 overflow-y-auto p-4 space-y-2">
             {todos.filter(t=>!t.canAiHandle).map(t => (
               <label key={t.id} className="flex items-start gap-2 text-sm text-gray-300 bg-white/5 border border-white/10 rounded-lg p-3">
-                <input type="checkbox" checked={!!t.done} onChange={(e)=> setTodos(prev=> prev.map(x=> x.id===t.id ? {...x, done:e.target.checked} : x))} className="mt-0.5" />
+                <input type="checkbox" checked={!!t.done} onChange={async (e)=> {
+                  const newDone = e.target.checked;
+                  setTodos(prev=> prev.map(x=> x.id===t.id ? {...x, done:newDone} : x));
+                  try {
+                    await fetch(`/api/todos/${t.id}` , {
+                      method: 'PATCH',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ done: newDone })
+                    });
+                  } catch {}
+                }} className="mt-0.5" />
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
                     <span className={`${t.done ? 'line-through text-gray-500' : ''}`}>{t.title}</span>
@@ -500,12 +534,29 @@ const HomeView = ({ isAiActive, userName = 'Tony', logs = [] }: { isAiActive: bo
             )}
           </div>
           <div className="p-4 border-t border-white/10 flex items-center gap-2">
-            <input placeholder="New task…" className="flex-1 rounded-md bg-white/5 border border-white/10 text-sm text-gray-200 p-2 outline-none focus:ring-1 focus:ring-emerald-400" onKeyDown={(e)=>{
+            <input placeholder="New task…" className="flex-1 rounded-md bg-white/5 border border-white/10 text-sm text-gray-200 p-2 outline-none focus:ring-1 focus:ring-emerald-400" onKeyDown={async (e)=>{
               if (e.key==='Enter') {
                 const v=(e.target as HTMLInputElement).value.trim();
                 if (!v) return;
-                setTodos(prev=> [...prev, { id: Date.now(), title:v, canAiHandle:false, done:false }]);
-                (e.target as HTMLInputElement).value='';
+                try {
+                  const res = await fetch('/api/todos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: v, canAiHandle: false })
+                  });
+                  if (res.ok) {
+                    const created: Todo = await res.json();
+                    setTodos(prev=> [...prev, created]);
+                    (e.target as HTMLInputElement).value='';
+                  } else {
+                    // fallback local add
+                    setTodos(prev=> [...prev, { id: Date.now(), title:v, canAiHandle:false, done:false }]);
+                    (e.target as HTMLInputElement).value='';
+                  }
+                } catch {
+                  setTodos(prev=> [...prev, { id: Date.now(), title:v, canAiHandle:false, done:false }]);
+                  (e.target as HTMLInputElement).value='';
+                }
               }
             }} />
             <button onClick={()=> setTodoOpen(false)} className="px-3 py-1.5 rounded-lg text-xs border border-emerald-400/30 text-emerald-200 bg-emerald-500/10 hover:bg-emerald-500/20">Done</button>
