@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 
 export const dynamic = 'force-dynamic'
+export const runtime = 'nodejs'
 
 export async function GET() {
   // Return all todos (client filters human-required as needed)
+  const { prisma } = await import('@/lib/prisma')
   const todos = await prisma.todo.findMany({ orderBy: { createdAt: 'desc' } })
   return NextResponse.json(todos, { status: 200 })
 }
 
 export async function POST(req: Request) {
   try {
+    const { prisma } = await import('@/lib/prisma')
     const body = await req.json().catch(() => ({})) as { title?: string; due?: string; canAiHandle?: boolean }
     const title = (body.title || '').trim()
     if (!title) return NextResponse.json({ error: 'title is required' }, { status: 400 })
