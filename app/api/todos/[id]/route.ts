@@ -7,7 +7,11 @@ export async function GET(_req: Request, ctx: { params: { id: string } }) {
   try {
     const id = Number(ctx.params.id)
     if (!Number.isFinite(id)) return NextResponse.json({ error: 'invalid id' }, { status: 400 })
-    const { prisma } = await import('@/lib/prisma')
+    if (!process.env.DATABASE_URL) {
+      return NextResponse.json({ error: 'DATABASE_URL is not configured' }, { status: 503 })
+    }
+    const { getPrisma } = await import('@/lib/prisma')
+    const prisma = getPrisma()
     const todo = await prisma.todo.findUnique({ where: { id } })
     if (!todo) return NextResponse.json({ error: 'not found' }, { status: 404 })
     return NextResponse.json(todo, { status: 200 })
@@ -22,7 +26,11 @@ export async function PATCH(_req: Request, ctx: { params: { id: string } }) {
     if (!Number.isFinite(id)) return NextResponse.json({ error: 'invalid id' }, { status: 400 })
 
     const body = await _req.json().catch(() => ({})) as { title?: string; due?: string; canAiHandle?: boolean; done?: boolean }
-    const { prisma } = await import('@/lib/prisma')
+    if (!process.env.DATABASE_URL) {
+      return NextResponse.json({ error: 'DATABASE_URL is not configured' }, { status: 503 })
+    }
+    const { getPrisma } = await import('@/lib/prisma')
+    const prisma = getPrisma()
     const updated = await prisma.todo.update({
       where: { id },
       data: {
@@ -43,7 +51,11 @@ export async function DELETE(_req: Request, ctx: { params: { id: string } }) {
   try {
     const id = Number(ctx.params.id)
     if (!Number.isFinite(id)) return NextResponse.json({ error: 'invalid id' }, { status: 400 })
-    const { prisma } = await import('@/lib/prisma')
+    if (!process.env.DATABASE_URL) {
+      return NextResponse.json({ error: 'DATABASE_URL is not configured' }, { status: 503 })
+    }
+    const { getPrisma } = await import('@/lib/prisma')
+    const prisma = getPrisma()
     const deleted = await prisma.todo.delete({ where: { id } }).catch(() => null)
     if (!deleted) return NextResponse.json({ error: 'not found' }, { status: 404 })
     return NextResponse.json({ ok: true }, { status: 200 })
