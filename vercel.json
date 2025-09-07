@@ -1,5 +1,5 @@
 {
   "framework": "nextjs",
-  "buildCommand": "prisma generate && if [ -n \"$DATABASE_URL\" ]; then prisma migrate deploy; else echo 'Skipping prisma migrate (no DATABASE_URL)'; fi && next build",
+  "buildCommand": "prisma generate && if [ -n \"$DATABASE_URL\" ] && echo \"$DATABASE_URL\" | grep -Eq '^postgres(ql)?:\\/\\/'; then prisma migrate deploy; else echo 'Skipping prisma migrate (missing or invalid DATABASE_URL)'; fi && next build",
   "installCommand": "npm install"
 }

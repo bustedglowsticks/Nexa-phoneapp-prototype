@@ -1,6 +1,7 @@
 // Simple icon generator using sharp
 // Input: public/icons/source.png (square)
-// Output: public/icons/icon-192.png, icon-512.png, apple-touch-icon.png (180)
+// Output: public/icons/icon-192.png, icon-256.png, icon-384.png, icon-512.png, icon-1024.png
+//         and apple-touch-icon variants (152, 167, 180)
 
 const fs = require('fs');
 const path = require('path');
@@ -21,8 +22,15 @@ const sharp = require('sharp');
     if (!fs.existsSync(outDir)) fs.mkdirSync(outDir, { recursive: true });
 
     const targets = [
+      // Standard PWA icons
       { size: 192, name: 'icon-192.png' },
+      { size: 256, name: 'icon-256.png' },
+      { size: 384, name: 'icon-384.png' },
       { size: 512, name: 'icon-512.png' },
+      { size: 1024, name: 'icon-1024.png' },
+      // Apple touch icons
+      { size: 152, name: 'apple-touch-icon-152.png' },
+      { size: 167, name: 'apple-touch-icon-167.png' },
       { size: 180, name: 'apple-touch-icon.png' },
     ];
 
